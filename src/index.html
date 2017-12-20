@@ -1,0 +1,175 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>React Webpack Template Title</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="description" content="">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="stylesheet" href="https://js.arcgis.com/3.23/dijit/themes/nihilo/nihilo.css">
+    <link rel="stylesheet" href="https://js.arcgis.com/3.23/esri/css/esri.css">
+    <script src="https://code.jquery.com/qunit/qunit-2.4.1.js"></script>
+    <style>
+      html, body, #mainWindow {
+        font-family: sans-serif; 
+        height: 100%; 
+        width: 100%; 
+      }
+      html, body {
+        margin: 0; 
+        padding: 0;
+      }
+      #header {
+        height: 80px;
+        overflow: auto;
+        padding: 0.5em;
+      }
+    </style>
+    
+    <script src="https://js.arcgis.com/3.23/"></script>
+    <script>
+      var map, toolbar, symbol, geomTask, featureLayer;
+
+      var graphicsArray = [];
+
+      require([
+        "esri/map", 
+        "esri/toolbars/draw",
+        "esri/graphic",
+
+        "esri/symbols/SimpleMarkerSymbol",
+        "esri/symbols/SimpleLineSymbol",
+        "esri/symbols/SimpleFillSymbol",
+
+        "dojo/parser", "dijit/registry",
+
+        "dijit/layout/BorderContainer", "dijit/layout/ContentPane", 
+        "dijit/form/Button", "dijit/WidgetSet", "dojo/domReady!",
+        "esri/layers/FeatureLayer", "esri/dijit/editing/Delete"
+      ], function(
+        Map, Draw, Graphic,
+        SimpleMarkerSymbol, SimpleLineSymbol, SimpleFillSymbol,
+        parser, registry, Delete, FeatureLayer
+      ) {
+        parser.parse();
+
+        map = new Map("app", {
+          basemap: "streets",
+          center: [-15.469, 36.428],
+          zoom: 3
+        });
+        
+        map.on("load", createToolbar);
+
+        registry.forEach(function(d) {
+
+          if ( d.declaredClass === "dijit.form.Button" ) {
+            d.on("click", activateTool);
+          }
+        });
+
+        function activateTool() {
+          var tool = this.label.toUpperCase().replace(/ /g, "_");
+          if (tool == 'DIBUJAR'){
+          	tool = 'POLYGON';
+          	toolbar.activate(Draw[tool]);
+          	map.hideZoomSlider();
+          }
+          if (tool == 'ELIMINAR'){
+          	toolbar.deactivate();
+          	map.graphics.clear();
+          	map.showZoomSlider();
+          	localStorage.removeItem("graph");
+          	graphicsArray = [];
+          }
+        }
+
+        function createToolbar(themap) {
+          toolbar = new Draw(map);
+          toolbar.on("draw-end", addToMap);
+        }
+
+        function addToMap(evt) {
+        		var returnGraph = localStorage.getItem('graph');
+
+          if (returnGraph){
+
+	          toolbar.deactivate();
+	          map.showZoomSlider();
+          	
+          localStorage.setItem('graph', JSON.stringify(evt.geometry));
+        		var returnGraph = localStorage.getItem('graph');
+
+          	var myPolygon = {"geometry":{"rings":JSON.parse(returnGraph).rings,"spatialReference":JSON.parse(returnGraph).spatialReference},
+							    "symbol":{"color":[0,0,0,64],"outline":{"color":[0,0,0,255],
+							    "width":1,"type":"esriSLS","style":"esriSLSSolid"},
+							    "type":"esriSFS","style":"esriSFSSolid"}};
+
+	          var str = new Graphic(myPolygon);
+	          evt.geometry = {};
+	          graphicsArray.push(str);
+	          var clone = graphicsArray.slice(0);
+	          console.log(clone);
+
+	          function addSomeGraphics() {
+									    for (i = 0; i < clone.length; ++i) {
+								    	    map.graphics.add(clone[i]);
+									    }
+								    }
+								    var other = new addSomeGraphics();
+          	
+          }else{
+          	toolbar.deactivate();
+	          map.showZoomSlider();
+	          switch (evt.geometry.type) {
+	            case "point":
+	            case "multipoint":
+	              symbol = new SimpleMarkerSymbol();
+	              break;
+	            case "polyline":
+	              symbol = new SimpleLineSymbol();
+	              break;
+	            default:
+	              symbol = new SimpleFillSymbol();
+	              break;
+	          }
+          	localStorage.setItem('graph', JSON.stringify(evt.geometry));
+          	var returnGraph = localStorage.getItem('graph');
+	          var myPolygon = {"geometry":{"rings":JSON.parse(returnGraph).rings,"spatialReference":JSON.parse(returnGraph).spatialReference},
+							    "symbol":{"color":[0,0,0,64],"outline":{"color":[0,0,0,255],
+							    "width":1,"type":"esriSLS","style":"esriSLSSolid"},
+							    "type":"esriSFS","style":"esriSFSSolid"}};
+
+	          var str = new Graphic(myPolygon);
+
+	          graphicsArray.push(str);
+
+	          function addSomeGraphics() {
+									    for (i = 0; i < graphicsArray.length; ++i) {
+								    	    map.graphics.add(graphicsArray[i]);
+									    }
+								    }
+								    var other = new addSomeGraphics();
+
+          }
+        }
+        var example = new addToMap();
+        console.log(example);
+      });
+
+    </script>
+</head>
+<body class="nihilo">
+	<div id="mainWindow" data-dojo-type="dijit/layout/BorderContainer" data-dojo-props="design:'headline'">
+		<div id="header" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'top'">
+			<span><img src="/images/images.png" style="width: 90px; height: 75px; display: inline-block;"></span>
+	  <button data-dojo-type="dijit/form/Button" style="display: inline-block;vertical-align: top; margin-left: 50px; margin-right: 20px;">Dibujar</button>
+	  <button data-dojo-type="dijit/form/Button" style="display: inline-block;vertical-align: top;">Eliminar</button>
+	 </div>
+	 <div id="app" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'center'"></div>
+	</div>
+
+  <script>__REACT_DEVTOOLS_GLOBAL_HOOK__ = parent.__REACT_DEVTOOLS_GLOBAL_HOOK__</script>
+  <!--<script type="text/javascript" src="/assets/app.js"></script>-->
+</body>
+</html>
